@@ -1,14 +1,13 @@
 [workspace]
 members = ["core", "macro", "."]
-resolver = "2"
 exclude = ["examples"]
+resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
-license-file = "LICENSE"
 authors = ["w-sodalite@hotmail.com"]
 homepage = "https://github.com/w-sodalite/leptos-controls.git"
 repository = "https://github.com/w-sodalite/leptos-controls.git"
@@ -28,12 +27,11 @@ edition.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
-license-file.workspace = true
 description = "Leptos Controls"
 
 [dependencies]
-leptos-controls-core = { path = "core" }
-leptos-controls-macro = { path = "macro" }
+leptos-controls-core = { path = "core", version = "0.1.1" }
+leptos-controls-macro = { path = "macro", version = "0.1.1" }
 
 [dev-dependencies]
 leptos = { version = "0.6" }
