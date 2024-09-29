@@ -23,7 +23,7 @@ where
         }
     }
 
-    pub fn label(&self) -> &str {
+    pub fn label(&self) -> &'static str {
         M::LABEL
     }
 
