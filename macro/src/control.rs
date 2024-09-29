@@ -1,116 +1,130 @@
 use crate::options::FormOptions;
 use darling::FromMeta;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse_quote, Path, Type};
+use quote::quote;
+use syn::Path;
 
-pub struct Controls<'a> {
+pub struct ControlStruct<'a> {
     options: &'a FormOptions,
 }
 
-impl<'a> Controls<'a> {
+impl<'a> ControlStruct<'a> {
     pub fn new(options: &'a FormOptions) -> Self {
         Self { options }
     }
 }
 
-impl<'a> From<Controls<'a>> for TokenStream {
-    fn from(controls: Controls<'a>) -> Self {
-        let options = controls.options;
+impl<'a> From<ControlStruct<'a>> for TokenStream {
+    fn from(value: ControlStruct<'a>) -> Self {
+        let options = value.options;
         let ident = options.ident();
         let vis = options.vis();
-        let controls_ident = options.controls_ident();
-        let field_enum_ident = options.field_enum_ident();
-        let fields_with_comma_tokens = options.fields_with_comma_tokens();
+        let control_struct_ident = options.control_struct_ident();
+        let field_tokens = options.field_tokens();
 
-        let view_field_tokens = options.fields().iter().map(|field| {
-            let ident = field.ident();
-            quote! {
-                #ident: #field_enum_ident
-            }
-        });
-        let fn_set_tokens = options.fields().iter().map(|field| {
-            let ident = field.ident();
-            quote! {
-                <#field_enum_ident as thaw_form::FormField>::reset(&self.#ident);
-            }
-        });
-
-        let mut field_define_tokens = vec![];
-        let mut field_set_tokens = vec![];
-        let mut field_initialize_tokens = vec![];
-        options.fields().iter().for_each(|field| {
-            let field_ident = field.ident();
-            let field_variant_ident = field.variant_ident();
-            let option_field_ident = format_ident!("__{}", field_ident);
+        // 控制器字段
+        let field_with_type_tokens = options.fields().iter().map(|field| {
             let ty = field.ty();
-            field_define_tokens.push(quote! {let mut #option_field_ident = None;});
-            field_initialize_tokens.push(quote! {#field_ident: #option_field_ident.unwrap()});
-            field_set_tokens.push(quote! {
-                if let #field_enum_ident::#field_variant_ident(value) = #field_ident {
-                    #option_field_ident = Some(<leptos::RwSignal<#ty as leptos::SignalGet>::get(&value));
-                }
-            });
+            let ident = field.ident();
+            let struct_ident = field.struct_ident();
+            quote! {
+                #ident: leptos_controls::RwSignalField<#struct_ident, #ty>
+            }
         });
 
+        // 创建RwSignalField
+        let set_signal_tokens = options.fields().iter().map(|field| {
+            let ident = field.ident();
+            quote! {
+                let #ident = leptos_controls::RwSignalField::new(#ident);
+            }
+        });
+
+        // rest函数
+        let fn_reset_tokens = options.fields().iter().map(|field| {
+            let ident = field.ident();
+            quote! {
+                self.#ident.set_default();
+            }
+        });
+
+        // snapshot函数
+        let get_untracked_tokens = options.fields().iter().map(|field| {
+            let ty = field.ty();
+            let ident = field.ident();
+            let struct_ident = field.struct_ident();
+            quote! {
+                let #ident = <leptos_controls::RwSignalField<#struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&#ident);
+            }
+        });
+
+        // validate函数
         let fn_validate_tokens = options
             .fields()
             .iter()
-            .filter(|field| field.required())
+            .filter(|field| field.validate().is_some())
             .map(|field| {
-                let ident = field.ident();
-                let variant_ident = field.variant_ident();
                 let ty = field.ty();
+                let ident = field.ident();
+                let struct_ident = field.struct_ident();
                 let label = field.label();
                 let message = field.message();
-                match field.validate() {
-                    Some(validate) => {
-                        let validate_method = Path::from_string(validate).unwrap();
-                        let error = match message {
-                            Some(message) => quote! {
+                let validate = field.validate().unwrap();
+                let validate_method = Path::from_string(validate).unwrap();
+                let error = match message {
+                    Some(message) => quote! {
                             std::borrow::Cow::from(#message)
                         },
-                            None => quote! {
+                    None => quote! {
                             std::borrow::Cow::from(concat!(#label, "校验失败!"))
                         }
-                        };
-                        quote! {
-                        if let #field_enum_ident::#variant_ident(value) = #ident {
-                             if #validate_method(&<leptos::RwSignal<#ty> as leptos::SignalGetUntracked>::get_untracked(&value)) {
-                                None
-                            }else{
-                                Some(#error)
-                            }
-                        } else {
+                };
+                quote! {
+                        if #validate_method(&<leptos_controls::RwSignalField<#struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&self.#ident)) {
                             None
+                        }else{
+                            Some(#error)
                         }
                     }
-                    }
-                    None => quote! {None}
-                }
-            });
+            }).collect::<Vec<_>>();
+        let fn_validate_body = if fn_validate_tokens.is_empty() {
+            quote! {
+                vec![]
+            }
+        } else {
+            quote! {
+                #[allow(unused_variables)]
+                    let #control_struct_ident { #(#field_tokens,)* .. } = *self;
+                    vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
+            }
+        };
+
         quote! {
             #[derive(Clone, Copy)]
-            #vis struct #controls_ident {
-                #(#view_field_tokens,)*
+            #vis struct #control_struct_ident {
+                #(#field_with_type_tokens,)*
             }
 
-            impl #controls_ident {
-                pub fn reset(&self) {
-                    #(#fn_set_tokens)*
+            impl #control_struct_ident {
+                pub fn new(value: #ident) -> Self {
+                  let #ident { #(#field_tokens,)*.. }  = value;
+                    #(#set_signal_tokens)*
+                    #control_struct_ident {
+                        #(#field_tokens,)*
+                    }
+                }
+                pub fn set_default(&self) {
+                    #(#fn_reset_tokens)*
                 }
                 pub fn snapshot(&self) -> #ident {
-                    let #controls_ident { #(#fields_with_comma_tokens,)* .. } = *self;
-                    #(#field_define_tokens)*
-                    #(#field_set_tokens)*
+                    let #control_struct_ident { #(#field_tokens,)* .. } = *self;
+                    #(#get_untracked_tokens)*
                     #ident{
-                        #(#field_initialize_tokens,)*
+                        #(#field_tokens,)*
                     }
                 }
                 pub fn validate(&self) -> Vec<std::borrow::Cow<'static,str>> {
-                    #[allow(unused_variables)]
-                    let #controls_ident { #(#fields_with_comma_tokens,)* .. } = *self;
-                    vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
+                    #fn_validate_body
                 }
             }
         }

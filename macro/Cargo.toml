@@ -1,0 +1,13 @@
+[package]
+name = "leptos-controls-macro"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { version = "1.0" }
+darling = { version = "0.20" }
+proc-macro2 = { version = "1.0" }
+syn = { version = "2.0", features = ["full"] }

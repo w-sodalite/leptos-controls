@@ -1,0 +1,22 @@
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["core", "macro", "."]
+resolver = "2"
+
+[package]
+name = "leptos-controls"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+leptos-controls-core = { path = "core" }
+leptos-controls-macro = { path = "macro" }
+
+[dev-dependencies]
+leptos = { version = "0.6" }
+
+[features]
+thaw = ["leptos-controls-core/thaw"]
