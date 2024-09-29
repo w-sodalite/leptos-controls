@@ -12,6 +12,14 @@ authors = ["w-sodalite@hotmail.com"]
 readme = "README.md"
 repository = "https://github.com/w-sodalite/leptos-controls.git"
 
+[workspace.metadata.release]
+registry = "crates-io"
+shared-version = true
+consolidate-commits = true
+pre-release-commit-message = "Release {{version}}"
+tag-name = "v{{version}}"
+allow-branch = ["master"]
+
 [package]
 name = "leptos-controls"
 version.workspace = true
