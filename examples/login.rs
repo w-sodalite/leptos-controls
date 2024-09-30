@@ -10,7 +10,7 @@ pub struct LoginArgs {
     #[field(label = "账号", validate = "is_not_empty", message = "账号不能为空")]
     account: String,
 
-    #[field(label = "密码")]
+    #[field(label = "密码", readonly = true)]
     password: String,
 }
 
@@ -26,6 +26,8 @@ fn main() {
     let errors = controls.validate();
     println!("{:?}", errors);
     // []
+
+    controls.account.validate();
 
     let account = controls.account.label();
     println!("{}", account);
@@ -49,6 +51,5 @@ fn main() {
 
     // set default
     controls.account.set_default();
-    controls.password.set_default();
     controls.set_default();
 }

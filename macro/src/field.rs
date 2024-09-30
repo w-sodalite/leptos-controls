@@ -1,6 +1,8 @@
 use crate::options::FormOptions;
+use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::quote;
+use syn::Path;
 
 pub struct FieldStruct<'a> {
     options: &'a FormOptions,
@@ -29,13 +31,43 @@ impl<'a> From<FieldStruct<'a>> for TokenStream {
 
         // 实现FieldMeta
         let impl_field_meta_tokens = options.fields().iter().map(|field| {
+            let ty = field.ty();
+            let field_ident = field.ident();
             let field_struct_ident = field.struct_ident(ident);
             let label = field.label();
             let required = field.validate().is_some();
+            let message = field.message();
+            let validate = match field.validate() {
+                Some(validate) => {
+                    let validate = Path::from_string(validate).unwrap();
+                    let error = match message {
+                        Some(message) => quote! {
+                            std::borrow::Cow::from(#message)
+                        },
+                        None => quote! {
+                            std::borrow::Cow::from(concat!(#label, "校验失败!"))
+                        }
+                    };
+                    quote! {
+                        move |v|{
+                          if #validate(v) {
+                                None
+                            }else{
+                                Some(#error)
+                            }
+                        }
+                    }
+                }
+                None => quote! {
+                    move |v| None
+                },
+            };
             quote! {
                 impl leptos_controls::FieldMeta for #field_struct_ident {
+                    type Type = #ty;
                     const LABEL: &'static str = #label;
                     const REQUIRED: bool = #required;
+                    const VALIDATE: fn(&Self::Type) -> Option<std::borrow::Cow<'static, str>> = #validate;
                 }
             }
         });

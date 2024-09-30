@@ -27,34 +27,57 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
             let ty = field.ty();
             let field_ident = field.ident();
             let field_struct_ident = field.struct_ident(ident);
-            quote! {
-                #field_ident: leptos_controls::RwSignalField<#field_struct_ident, #ty>
+            if field.readonly() {
+                quote! {
+                    #field_ident: leptos_controls::SignalField<#field_struct_ident, #ty>
+                }
+            } else {
+                quote! {
+                    #field_ident: leptos_controls::RwSignalField<#field_struct_ident, #ty>
+                }
             }
         });
 
         // 创建RwSignalField
         let set_signal_tokens = options.fields().iter().map(|field| {
             let field_ident = field.ident();
-            quote! {
-                let #field_ident = leptos_controls::RwSignalField::new(#field_ident);
+            if field.readonly() {
+                quote! {
+                    let #field_ident = leptos_controls::SignalField::new(#field_ident);
+                }
+            } else {
+                quote! {
+                    let #field_ident = leptos_controls::RwSignalField::new(#field_ident);
+                }
             }
         });
 
         // rest函数
-        let fn_reset_tokens = options.fields().iter().map(|field| {
-            let field_ident = field.ident();
-            quote! {
-                self.#field_ident.set_default();
-            }
-        });
+        let fn_reset_tokens =
+            options
+                .fields()
+                .iter()
+                .filter(|field| !field.readonly())
+                .map(|field| {
+                    let field_ident = field.ident();
+                    quote! {
+                        self.#field_ident.set_default();
+                    }
+                });
 
         // snapshot函数
         let get_untracked_tokens = options.fields().iter().map(|field| {
             let ty = field.ty();
             let field_ident = field.ident();
             let field_struct_ident = field.struct_ident(ident);
-            quote! {
-                let #field_ident = <leptos_controls::RwSignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&#field_ident);
+            if field.readonly() {
+                quote! {
+                    let #field_ident = <leptos_controls::SignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&#field_ident);
+                }
+            } else {
+                quote! {
+                    let #field_ident = <leptos_controls::RwSignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&#field_ident);
+                }
             }
         });
 
@@ -69,8 +92,7 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                 let field_struct_ident = field.struct_ident(ident);
                 let label = field.label();
                 let message = field.message();
-                let validate = field.validate().unwrap();
-                let validate_method = Path::from_string(validate).unwrap();
+                let validate = Path::from_string(field.validate().unwrap()).unwrap();
                 let error = match message {
                     Some(message) => quote! {
                             std::borrow::Cow::from(#message)
@@ -80,7 +102,7 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                         }
                 };
                 quote! {
-                        if #validate_method(&<leptos_controls::RwSignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&self.#field_ident)) {
+                        if #validate(&<leptos_controls::RwSignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&self.#field_ident)) {
                             None
                         }else{
                             Some(#error)

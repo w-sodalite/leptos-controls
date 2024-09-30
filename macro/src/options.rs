@@ -84,6 +84,12 @@ pub struct FormFieldOptions {
     ty: Type,
 
     ///
+    /// 是否忽略
+    ///
+    #[darling(default)]
+    readonly: bool,
+
+    ///
     /// 字段标签
     ///
     #[darling(default)]
@@ -124,6 +130,10 @@ impl FormFieldOptions {
 
     pub fn ty(&self) -> &Type {
         &self.ty
+    }
+
+    pub fn readonly(&self) -> bool {
+        self.readonly
     }
 
     pub fn label(&self) -> Cow<'_, str> {
