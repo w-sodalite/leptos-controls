@@ -105,7 +105,7 @@ impl FormFieldOptions {
         self.ident.as_ref().expect("Ident is not exists!")
     }
 
-    pub fn struct_ident(&self) -> Ident {
+    pub fn struct_ident(&self, parent: &Ident) -> Ident {
         let lit = format!("{}", self.ident());
         let lit = lit
             .split('_')
@@ -119,7 +119,7 @@ impl FormFieldOptions {
             })
             .collect::<Vec<_>>()
             .join("");
-        format_ident!("__{}", lit)
+        format_ident!("__{}__{}", parent, lit)
     }
 
     pub fn ty(&self) -> &Type {
