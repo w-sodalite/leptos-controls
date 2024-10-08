@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_controls::Controls;
+use leptos_controls::{Controls, Field};
 
 fn is_not_empty(text: &str) -> bool {
     !text.is_empty()
@@ -23,6 +23,7 @@ fn main() {
 
     controls.account.set("admin".to_string());
     controls.account.set("123456".to_string());
+
     let errors = controls.validate();
     println!("{:?}", errors);
     // []

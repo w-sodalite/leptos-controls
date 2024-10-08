@@ -1,8 +1,6 @@
 use crate::options::FormOptions;
-use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::Path;
 
 pub struct ControlStruct<'a> {
     options: &'a FormOptions,
@@ -53,17 +51,24 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
         });
 
         // rest函数
-        let fn_reset_tokens =
-            options
-                .fields()
-                .iter()
-                .filter(|field| !field.readonly())
-                .map(|field| {
-                    let field_ident = field.ident();
+        let fn_reset_tokens = options
+            .fields()
+            .iter()
+            .filter(|field| !field.readonly())
+            .map(|field| {
+                let ty = field.ty();
+                let field_ident = field.ident();
+                let field_struct_ident = field.struct_ident(ident);
+                if field.readonly() {
                     quote! {
-                        self.#field_ident.set_default();
+                        <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&#field_ident)
                     }
-                });
+                } else {
+                    quote! {
+                        <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&#field_ident)
+                    }
+                }
+            });
 
         // snapshot函数
         let get_untracked_tokens = options.fields().iter().map(|field| {
@@ -90,35 +95,21 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                 let ty = field.ty();
                 let field_ident = field.ident();
                 let field_struct_ident = field.struct_ident(ident);
-                let label = field.label();
-                let message = field.message();
-                let validate = Path::from_string(field.validate().unwrap()).unwrap();
-                let error = match message {
-                    Some(message) => quote! {
-                            std::borrow::Cow::from(#message)
-                        },
-                    None => quote! {
-                            std::borrow::Cow::from(concat!(#label, "校验失败!"))
-                        }
-                };
-                quote! {
-                        if #validate(&<leptos_controls::RwSignalField<#field_struct_ident,#ty> as leptos::SignalGetUntracked>::get_untracked(&self.#field_ident)) {
-                            None
-                        }else{
-                            Some(#error)
-                        }
+                if field.readonly() {
+                    quote! {
+                        <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
                     }
-            }).collect::<Vec<_>>();
-        let fn_validate_body = if fn_validate_tokens.is_empty() {
-            quote! {
-                vec![]
-            }
-        } else {
-            quote! {
+                } else {
+                    quote! {
+                        <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+        let fn_validate_body = quote! {
                 #[allow(unused_variables)]
-                    let #control_struct_ident { #(#field_tokens,)* .. } = *self;
-                    vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
-            }
+                let #control_struct_ident { #(#field_tokens,)* .. } = *self;
+                vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
         };
 
         quote! {
@@ -135,9 +126,11 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                         #(#field_tokens,)*
                     }
                 }
+
                 pub fn set_default(&self) {
                     #(#fn_reset_tokens)*
                 }
+
                 pub fn snapshot(&self) -> #ident {
                     let #control_struct_ident { #(#field_tokens,)* .. } = *self;
                     #(#get_untracked_tokens)*
@@ -145,6 +138,7 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                         #(#field_tokens,)*
                     }
                 }
+
                 pub fn validate(&self) -> Vec<std::borrow::Cow<'static,str>> {
                     #fn_validate_body
                 }

@@ -32,7 +32,6 @@ impl<'a> From<FieldStruct<'a>> for TokenStream {
         // 实现FieldMeta
         let impl_field_meta_tokens = options.fields().iter().map(|field| {
             let ty = field.ty();
-            let field_ident = field.ident();
             let field_struct_ident = field.struct_ident(ident);
             let label = field.label();
             let required = field.validate().is_some();

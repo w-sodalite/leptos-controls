@@ -125,7 +125,7 @@ impl FormFieldOptions {
             })
             .collect::<Vec<_>>()
             .join("");
-        format_ident!("__{}__{}", parent, lit)
+        format_ident!("{}{}", parent, lit)
     }
 
     pub fn ty(&self) -> &Type {

@@ -1,3 +1,4 @@
+use crate::field::Field;
 use crate::meta::FieldMeta;
 use leptos::*;
 use std::borrow::Cow;
@@ -5,7 +6,7 @@ use std::marker::PhantomData;
 
 pub struct SignalField<M, T>
 where
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
     T: Clone + 'static,
 {
     pub(crate) value: Signal<T>,
@@ -14,7 +15,7 @@ where
 
 impl<M, T> SignalField<M, T>
 where
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
     T: Clone + 'static,
 {
     pub fn new(value: T) -> Self {
@@ -23,27 +24,32 @@ where
             _mark: PhantomData,
         }
     }
+}
 
-    pub fn label(&self) -> &'static str {
+impl<M, T> Field for SignalField<M, T>
+where
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
+{
+    fn label(&self) -> &'static str {
         M::LABEL
     }
 
-    pub fn required(&self) -> bool {
+    fn required(&self) -> bool {
         M::REQUIRED
     }
 
-    pub fn validate(&self) -> Option<Cow<'static, str>> {
-        match M::VALIDATE {
-            Some(f) => Some(f(&self.get_untracked())),
-            None => None,
-        }
+    fn validate(&self) -> Option<Cow<'static, str>> {
+        M::VALIDATE(&self.get_untracked())
     }
+
+    fn set_default(&self) {}
 }
 
 impl<M, T> Clone for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
 {
     fn clone(&self) -> Self {
         *self
@@ -53,13 +59,14 @@ where
 impl<M, T> Copy for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
-{}
+    M: FieldMeta<Type = T>,
+{
+}
 
 impl<M, T> SignalWithUntracked for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -74,7 +81,7 @@ where
 impl<M, T> SignalWith for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -90,7 +97,7 @@ where
 impl<M, T> SignalGetUntracked for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -106,7 +113,7 @@ where
 impl<M, T> SignalGet for SignalField<M, T>
 where
     T: Clone + 'static,
-    M: FieldMeta<Type=T>,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
