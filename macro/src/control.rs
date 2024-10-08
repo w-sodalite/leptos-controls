@@ -23,15 +23,16 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
         // 控制器字段
         let field_with_type_tokens = options.fields().iter().map(|field| {
             let ty = field.ty();
+            let vis = field.vis();
             let field_ident = field.ident();
             let field_struct_ident = field.struct_ident(ident);
             if field.readonly() {
                 quote! {
-                    #field_ident: leptos_controls::SignalField<#field_struct_ident, #ty>
+                   #vis #field_ident: leptos_controls::SignalField<#field_struct_ident, #ty>
                 }
             } else {
                 quote! {
-                    #field_ident: leptos_controls::RwSignalField<#field_struct_ident, #ty>
+                    #vis #field_ident: leptos_controls::RwSignalField<#field_struct_ident, #ty>
                 }
             }
         });
@@ -61,11 +62,11 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                 let field_struct_ident = field.struct_ident(ident);
                 if field.readonly() {
                     quote! {
-                        <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&#field_ident)
+                        <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&self.#field_ident);
                     }
                 } else {
                     quote! {
-                        <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&#field_ident)
+                        <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::set_default(&self.#field_ident);
                     }
                 }
             });
@@ -106,10 +107,16 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                 }
             })
             .collect::<Vec<_>>();
-        let fn_validate_body = quote! {
+        let fn_validate_body = if fn_validate_tokens.is_empty() {
+            quote! {
+                vec![]
+            }
+        } else {
+            quote! {
                 #[allow(unused_variables)]
                 let #control_struct_ident { #(#field_tokens,)* .. } = *self;
                 vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
+            }
         };
 
         quote! {

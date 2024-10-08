@@ -74,6 +74,11 @@ impl FormOptions {
 #[darling(attributes(field))]
 pub struct FormFieldOptions {
     ///
+    /// 可见性
+    ///
+    vis: Visibility,
+
+    ///
     /// 字段名称
     ///
     ident: Option<Ident>,
@@ -107,6 +112,10 @@ pub struct FormFieldOptions {
 }
 
 impl FormFieldOptions {
+    pub fn vis(&self) -> &Visibility {
+        &self.vis
+    }
+
     pub fn ident(&self) -> &Ident {
         self.ident.as_ref().expect("Ident is not exists!")
     }
