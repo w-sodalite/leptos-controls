@@ -1,45 +1,72 @@
+use crate::field::Field;
 use crate::meta::FieldMeta;
 use leptos::*;
+use std::borrow::Cow;
 use std::marker::PhantomData;
 
-pub struct RwSignalField<M, T>
+pub struct SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    M: FieldMeta<Type = T>,
+    T: Clone + 'static,
 {
-    pub(crate) value: RwSignal<T>,
+    pub(crate) value: Signal<T>,
     _mark: PhantomData<M>,
 }
 
-impl<T, M> RwSignalField<M, T>
+impl<M, T> SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    M: FieldMeta<Type = T>,
+    T: Clone + 'static,
 {
     pub fn new(value: T) -> Self {
         Self {
-            value: create_rw_signal(value),
+            value: Signal::derive(move || value.clone()),
             _mark: PhantomData,
         }
     }
+}
 
-    pub fn label(&self) -> &'static str {
+impl<M, T> Field for SignalField<M, T>
+where
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
+{
+    fn label(&self) -> &'static str {
         M::LABEL
     }
 
-    pub fn required(&self) -> bool {
+    fn required(&self) -> bool {
         M::REQUIRED
     }
 
-    pub fn set_default(&self) {
-        self.value.set(Default::default());
+    fn validate(&self) -> Option<Cow<'static, str>> {
+        M::VALIDATE(&self.get_untracked())
+    }
+
+    fn set_default(&self) {}
+}
+
+impl<M, T> Clone for SignalField<M, T>
+where
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
+{
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
-impl<M, T> SignalWithUntracked for RwSignalField<M, T>
+impl<M, T> Copy for SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
+{
+}
+
+impl<M, T> SignalWithUntracked for SignalField<M, T>
+where
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -51,11 +78,10 @@ where
         self.value.try_with_untracked(f)
     }
 }
-
-impl<M, T> SignalWith for RwSignalField<M, T>
+impl<M, T> SignalWith for SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -68,70 +94,10 @@ where
     }
 }
 
-impl<M, T> SignalUpdateUntracked<T> for RwSignalField<M, T>
+impl<M, T> SignalGetUntracked for SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    fn update_untracked(&self, f: impl FnOnce(&mut T)) {
-        self.value.update_untracked(f)
-    }
-
-    fn try_update_untracked<O>(&self, f: impl FnOnce(&mut T) -> O) -> Option<O> {
-        self.value.try_update_untracked(f)
-    }
-}
-
-impl<M, T> SignalUpdate for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    type Value = T;
-
-    fn update(&self, f: impl FnOnce(&mut Self::Value)) {
-        self.value.update(f);
-    }
-
-    fn try_update<O>(&self, f: impl FnOnce(&mut Self::Value) -> O) -> Option<O> {
-        self.value.try_update(f)
-    }
-}
-
-impl<M, T> SignalSetUntracked<T> for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    fn set_untracked(&self, new_value: T) {
-        self.value.set_untracked(new_value);
-    }
-
-    fn try_set_untracked(&self, new_value: T) -> Option<T> {
-        self.value.try_set_untracked(new_value)
-    }
-}
-
-impl<M, T> SignalSet for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    type Value = T;
-
-    fn set(&self, new_value: Self::Value) {
-        self.value.set(new_value);
-    }
-
-    fn try_set(&self, new_value: Self::Value) -> Option<Self::Value> {
-        self.value.try_set(new_value)
-    }
-}
-
-impl<M, T> SignalGetUntracked for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -144,10 +110,10 @@ where
     }
 }
 
-impl<M, T> SignalGet for RwSignalField<M, T>
+impl<M, T> SignalGet for SignalField<M, T>
 where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
+    T: Clone + 'static,
+    M: FieldMeta<Type = T>,
 {
     type Value = T;
 
@@ -157,32 +123,5 @@ where
 
     fn try_get(&self) -> Option<Self::Value> {
         self.value.try_get()
-    }
-}
-
-impl<V, M> Clone for RwSignalField<M, V>
-where
-    V: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T, M> Copy for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-}
-
-impl<M, T> Default for RwSignalField<M, T>
-where
-    T: Clone + Default + 'static,
-    M: FieldMeta,
-{
-    fn default() -> Self {
-        Self::new(T::default())
     }
 }

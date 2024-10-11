@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_controls::Controls;
+use leptos_controls::{Controls, Field};
 
 fn is_not_empty(text: &str) -> bool {
     !text.is_empty()
@@ -10,7 +10,7 @@ pub struct LoginArgs {
     #[field(label = "账号", validate = "is_not_empty", message = "账号不能为空")]
     account: String,
 
-    #[field(label = "密码")]
+    #[field(label = "密码", readonly = true)]
     password: String,
 }
 
@@ -23,9 +23,12 @@ fn main() {
 
     controls.account.set("admin".to_string());
     controls.account.set("123456".to_string());
+
     let errors = controls.validate();
     println!("{:?}", errors);
     // []
+
+    controls.account.validate();
 
     let account = controls.account.label();
     println!("{}", account);
@@ -49,6 +52,5 @@ fn main() {
 
     // set default
     controls.account.set_default();
-    controls.password.set_default();
     controls.set_default();
 }

@@ -74,6 +74,11 @@ impl FormOptions {
 #[darling(attributes(field))]
 pub struct FormFieldOptions {
     ///
+    /// 可见性
+    ///
+    vis: Visibility,
+
+    ///
     /// 字段名称
     ///
     ident: Option<Ident>,
@@ -82,6 +87,12 @@ pub struct FormFieldOptions {
     /// 字段类型
     ///
     ty: Type,
+
+    ///
+    /// 是否忽略
+    ///
+    #[darling(default)]
+    readonly: bool,
 
     ///
     /// 字段标签
@@ -101,6 +112,10 @@ pub struct FormFieldOptions {
 }
 
 impl FormFieldOptions {
+    pub fn vis(&self) -> &Visibility {
+        &self.vis
+    }
+
     pub fn ident(&self) -> &Ident {
         self.ident.as_ref().expect("Ident is not exists!")
     }
@@ -119,11 +134,15 @@ impl FormFieldOptions {
             })
             .collect::<Vec<_>>()
             .join("");
-        format_ident!("__{}__{}", parent, lit)
+        format_ident!("{}{}", parent, lit)
     }
 
     pub fn ty(&self) -> &Type {
         &self.ty
+    }
+
+    pub fn readonly(&self) -> bool {
+        self.readonly
     }
 
     pub fn label(&self) -> Cow<'_, str> {
