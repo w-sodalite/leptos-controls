@@ -4,7 +4,7 @@ exclude = ["examples"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -30,8 +30,8 @@ repository.workspace = true
 description = "Leptos Controls"
 
 [dependencies]
-leptos-controls-core = { path = "core", version = "0.1.5" }
-leptos-controls-macro = { path = "macro", version = "0.1.5" }
+leptos-controls-core = { path = "core", version = "0.1.6" }
+leptos-controls-macro = { path = "macro", version = "0.1.6" }
 
 [dev-dependencies]
 leptos = { version = "0.6" }
