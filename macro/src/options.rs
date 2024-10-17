@@ -1,4 +1,4 @@
-use darling::{ast, Error, FromDeriveInput, FromField};
+use darling::{ast, Error, FromDeriveInput, FromField, FromMeta};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use std::borrow::Cow;
@@ -7,8 +7,8 @@ use syn::{Type, Visibility};
 const CONTROL_IDENT: &str = "Controls";
 
 #[derive(FromDeriveInput)]
-#[darling(attributes(field), supports(struct_named))]
-pub struct FormOptions {
+#[darling(attributes(controls, field), supports(struct_named))]
+pub struct ControlOptions {
     ///
     /// 可见性
     ///
@@ -22,10 +22,16 @@ pub struct FormOptions {
     ///
     /// 字段集合
     ///
-    data: ast::Data<(), FormFieldOptions>,
+    data: ast::Data<(), ControlFieldOptions>,
+
+    ///
+    /// 校验方法
+    ///
+    #[darling(default)]
+    validate: Option<syn::Path>,
 }
 
-impl FormOptions {
+impl ControlOptions {
     pub fn vis(&self) -> &Visibility {
         &self.vis
     }
@@ -34,11 +40,15 @@ impl FormOptions {
         &self.ident
     }
 
-    pub fn fields(&self) -> &[FormFieldOptions] {
+    pub fn fields(&self) -> &[ControlFieldOptions] {
         match &self.data {
             ast::Data::Enum(_) => unreachable!(),
             ast::Data::Struct(fields) => &fields.fields,
         }
+    }
+
+    pub fn validate(&self) -> Option<&syn::Path> {
+        self.validate.as_ref()
     }
 
     pub fn control_struct_ident(&self) -> Ident {
@@ -56,7 +66,7 @@ impl FormOptions {
     ///
     /// 校验当前类型是否满足
     ///
-    pub fn validate(self) -> Result<Self, Error> {
+    pub fn verify(self) -> Result<Self, Error> {
         match &self.data {
             ast::Data::Enum(_) => Err(Error::unexpected_type("Enum")),
             ast::Data::Struct(fields) => {
@@ -70,9 +80,15 @@ impl FormOptions {
     }
 }
 
+#[derive(Default, FromMeta)]
+#[darling(default)]
+pub struct ControlAttributes {
+    validate: Option<String>,
+}
+
 #[derive(FromField)]
 #[darling(attributes(field))]
-pub struct FormFieldOptions {
+pub struct ControlFieldOptions {
     ///
     /// 可见性
     ///
@@ -111,7 +127,7 @@ pub struct FormFieldOptions {
     message: Option<String>,
 }
 
-impl FormFieldOptions {
+impl ControlFieldOptions {
     pub fn vis(&self) -> &Visibility {
         &self.vis
     }

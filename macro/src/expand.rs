@@ -1,6 +1,5 @@
-use crate::control::ControlStruct;
 use crate::field::FieldStruct;
-use crate::options::FormOptions;
+use crate::{control::ControlStruct, options::ControlOptions};
 use darling::{Error, FromDeriveInput};
 use proc_macro2::TokenStream;
 use syn::DeriveInput;
@@ -32,7 +31,7 @@ pub fn derive(input: DeriveInput) -> TokenStream {
 }
 
 fn try_expand(input: &DeriveInput) -> Result<TokenStream, Error> {
-    let options = FormOptions::from_derive_input(input).and_then(FormOptions::validate)?;
+    let options = ControlOptions::from_derive_input(input).and_then(ControlOptions::verify)?;
     let field_enum = TokenStream::from(FieldStruct::new(&options));
     let control_struct = TokenStream::from(ControlStruct::new(&options));
     Ok(TokenStream::from_iter([field_enum, control_struct]))
