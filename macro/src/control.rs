@@ -1,13 +1,14 @@
-use crate::options::FormOptions;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+use crate::options::ControlOptions;
+
 pub struct ControlStruct<'a> {
-    options: &'a FormOptions,
+    options: &'a ControlOptions,
 }
 
 impl<'a> ControlStruct<'a> {
-    pub fn new(options: &'a FormOptions) -> Self {
+    pub fn new(options: &'a ControlOptions) -> Self {
         Self { options }
     }
 }
@@ -87,35 +88,44 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
             }
         });
 
-        // validate函数
-        let fn_validate_tokens = options
-            .fields()
-            .iter()
-            .filter(|field| field.validate().is_some())
-            .map(|field| {
-                let ty = field.ty();
-                let field_ident = field.ident();
-                let field_struct_ident = field.struct_ident(ident);
-                if field.readonly() {
+        let fn_validate_body = match options.validate() {
+            Some(validate_fn) => {
+                quote! {
+                    #validate_fn(&self)
+                }
+            },
+            None => {
+                // validate函数
+                let fn_validate_tokens = options
+                    .fields()
+                    .iter()
+                    .filter(|field| field.validate().is_some())
+                    .map(|field| {
+                        let ty = field.ty();
+                        let field_ident = field.ident();
+                        let field_struct_ident = field.struct_ident(ident);
+                        if field.readonly() {
+                            quote! {
+                                <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
+                            }
+                        } else {
+                            quote! {
+                                <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
+                            }
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if fn_validate_tokens.is_empty() {
                     quote! {
-                        <leptos_controls::SignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
+                        vec![]
                     }
                 } else {
                     quote! {
-                        <leptos_controls::RwSignalField<#field_struct_ident, #ty> as leptos_controls::Field>::validate(&#field_ident)
+                        #[allow(unused_variables)]
+                        let #control_struct_ident { #(#field_tokens,)* .. } = *self;
+                        vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
                     }
                 }
-            })
-            .collect::<Vec<_>>();
-        let fn_validate_body = if fn_validate_tokens.is_empty() {
-            quote! {
-                vec![]
-            }
-        } else {
-            quote! {
-                #[allow(unused_variables)]
-                let #control_struct_ident { #(#field_tokens,)* .. } = *self;
-                vec![#(#fn_validate_tokens,)*].into_iter().flatten().collect()
             }
         };
 
@@ -126,6 +136,8 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
             }
 
             impl #control_struct_ident {
+
+                #[doc = "Construct a new instance from arguments"]
                 pub fn new(value: #ident) -> Self {
                   let #ident { #(#field_tokens,)*.. }  = value;
                     #(#set_signal_tokens)*
@@ -134,10 +146,12 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                     }
                 }
 
+                #[doc = "Set controls all values use default value"]
                 pub fn set_default(&self) {
                     #(#fn_reset_tokens)*
                 }
 
+                #[doc = "Get controls all values use untracked"]
                 pub fn snapshot(&self) -> #ident {
                     let #control_struct_ident { #(#field_tokens,)* .. } = *self;
                     #(#get_untracked_tokens)*
@@ -146,6 +160,7 @@ impl<'a> From<ControlStruct<'a>> for TokenStream {
                     }
                 }
 
+                #[doc = "Validate controls all field and return error messages"]
                 pub fn validate(&self) -> Vec<std::borrow::Cow<'static,str>> {
                     #fn_validate_body
                 }

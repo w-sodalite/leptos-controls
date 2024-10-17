@@ -1,15 +1,16 @@
-use crate::options::FormOptions;
 use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Path;
 
+use crate::options::ControlOptions;
+
 pub struct FieldStruct<'a> {
-    options: &'a FormOptions,
+    options: &'a ControlOptions,
 }
 
 impl<'a> FieldStruct<'a> {
-    pub fn new(options: &'a FormOptions) -> Self {
+    pub fn new(options: &'a ControlOptions) -> Self {
         Self { options }
     }
 }
