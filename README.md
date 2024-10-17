@@ -13,15 +13,17 @@
 
 在[Leptos](https://github.com/leptos-rs/leptos)中对结构体进行整体控制,支持配置字段名称、校验、定义错误信息等通用逻辑。
 
-## Usage
+## Dependency
 
 ```toml
+[dependencies]
 leptos-controls = { version = "0.1.6" }
 ```
 
 use [thaw](https://github.com/thaw-ui/thaw)
 
 ```toml
+[dependencies]
 leptos-controls = { version = "0.1.6", features = ["thaw"] }
 ```
 
